@@ -1,0 +1,14 @@
+{
+  "name": "socioatlas",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "frontend"
+  ],
+  "scripts": {
+    "dev:backend": "python -m backend.server",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "build:frontend": "npm run build --workspace=frontend"
+  }
+}
