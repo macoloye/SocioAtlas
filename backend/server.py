@@ -8,6 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from backend.routes.simulate import router as simulate_router
+from backend.routes.graph import router as graph_router
+from backend.routes.chat import router as chat_router
 from backend.utils.simulation_db import init_db
 
 app = FastAPI(title="SocioAtlas API", version="1.0.0")
@@ -21,6 +23,8 @@ app.add_middleware(
 )
 
 app.include_router(simulate_router, prefix="/api/simulate")
+app.include_router(graph_router, prefix="/api/graph")
+app.include_router(chat_router, prefix="/api/chat")
 
 
 @app.get("/api/health")

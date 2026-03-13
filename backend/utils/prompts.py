@@ -66,7 +66,7 @@ def build_agents_list(agents: list) -> str:
     return "\n".join(lines)
 
 
-def build_stance_prompt(event: str, stage: str, groups: list, agents: list) -> str:
+def build_stance_prompt(event: str, stage: str, groups: list, agents: list, persuadable_context: str = "") -> str:
     stage_description = STAGE_DESCRIPTIONS.get(stage, "")
     agents_list = build_agents_list(agents)
     
@@ -74,40 +74,42 @@ def build_stance_prompt(event: str, stage: str, groups: list, agents: list) -> s
     for g in groups:
         groups_list += f"- ID: {g.group_id} | Name: {g.name} | Desc: {g.description} | Posture: {g.stance_posture}\n"
 
-    return f"""You are running a societal simulation. Given an event, a list of agents, and the available groups for this stage, output each agent's stance, reasoning, and group assignment.
+    persuadable_section = f"\n{persuadable_context}\n" if persuadable_context else ""
+
+    return f"""You are running a societal simulation. Given an event, a list of agents, and the available groups for this stage, output each agent's reaction.
 
 EVENT: {event}
 
 TIMELINE STAGE: {stage}
 {stage_description}
-
+{persuadable_section}
 AVAILABLE GROUPS:
 {groups_list}
 
-INCENTIVE TYPES (use these to ground your reasoning):
+INCENTIVE TYPES:
   M = Material     — "what does this cost or gain me?"
   P = Power        — "does this increase or reduce my influence?"
   I = Identity     — "does this affirm or threaten who I am?"
   S = Survival     — "does this threaten my existence or way of life?"
   N = Normative    — "is this right or wrong regardless of self-interest?"
 
-Priority of incentives for most of the agents:
-Material (M) > Survival (S) > Identity (I) > Power (P) > Normative (N)
+Default incentive priority: M > S > I > P > N
+Override this when the agent's persona clearly indicates a different primary driver.
 
-STANCE SCALE:
-  +2 = Strongly Support
+SCORE SCALE:
+  +2 = Strongly support
   +1 = Support
-   0 = Neutral
+   0 = Neutral (genuinely indifferent)
   -1 = Oppose
-  -2 = Strongly Oppose
-   ± = Contested (internal split)
+  -2 = Strongly oppose
+  Use contested: true when the agent is internally split — not when they are
+  indifferent. Contested means two incentives pulling in opposite directions.
 
 AGENTS:
 {agents_list}
 
-For each agent, select the most appropriate group from the available groups, and output their stance at this timeline stage.
-Reasoning must be 1–2 sentences, grounded in their specific persona and the event.
-Do NOT be generic. Connect the persona to the event concretely.
+For each agent output the following. Be specific — reference the persona and
+event concretely. Do not be generic.
 
 Return ONLY valid JSON. No explanation outside the JSON block.
 
@@ -116,14 +118,35 @@ Return ONLY valid JSON. No explanation outside the JSON block.
   "results": [
     {{
       "agent_id": "string",
-      "assigned_group_id": "group_id_from_available_groups",
-      "stance": "Strongly Support | Support | Neutral | Oppose | Strongly Oppose | Contested",
-      "score": 2,
+      "assigned_group_id": "string",
+      "score": -2,
+      "contested": false,
       "incentive_active": "M | P | I | S | N",
-      "reasoning": "1–2 sentences"
+      "intensity": 1,
+      "visibility": "low | mid | high",
+      "flip_risk": 0.0,
+      "reasoning": "1–2 sentences grounded in persona + event"
     }}
   ]
 }}"""
+
+
+def build_stage_context(prev_results: list) -> str:
+    high_risk = [r for r in prev_results if r.flip_risk > 0.6]
+    contested  = [r for r in prev_results if r.contested]
+
+    lines = []
+    if high_risk:
+        lines.append("PERSUADABLE AGENTS (high flip risk from previous stage):")
+        for r in high_risk:
+            lines.append(f"  - {r.agent_id}: score was {r.score}, "
+                         f"incentive {r.incentive_active}, flip_risk {r.flip_risk:.1f}")
+    if contested:
+        lines.append("CONTESTED AGENTS (internally split, watch for resolution):")
+        for r in contested:
+            lines.append(f"  - {r.agent_id}: pulled between incentives")
+
+    return "\n".join(lines)
 
 def build_end_state_prompt(event: str, stage_label: str, groups: list, stances: dict) -> str:
     # Build group summary

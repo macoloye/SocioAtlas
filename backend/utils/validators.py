@@ -17,6 +17,20 @@ VALID_STANCE_LABELS = frozenset({
     "Oppose", "Strongly Oppose", "Contested",
 })
 VALID_SCORES = frozenset({-2, -1, 0, 1, 2})
+VALID_INTENSITIES = frozenset({1, 2, 3})
+VALID_VISIBILITIES = frozenset({"low", "mid", "high"})
+
+
+def _score_to_stance_label(score: int) -> str:
+    if score >= 2:
+        return "Strongly Support"
+    if score >= 1:
+        return "Support"
+    if score <= -2:
+        return "Strongly Oppose"
+    if score <= -1:
+        return "Oppose"
+    return "Neutral"
 
 
 class ValidationError(ValueError):
@@ -93,24 +107,44 @@ def parse_stance_response(raw: str) -> StageOutput:
             raise ValidationError(f"Result {i} is not an object")
 
         agent_id = r.get("agent_id", "")
-        stance = r.get("stance", "Neutral")
-        if stance not in VALID_STANCE_LABELS:
-            stance = "Neutral"
 
         raw_score = r.get("score")
         score = int(raw_score) if isinstance(raw_score, (int, float)) and int(raw_score) in VALID_SCORES else 0
 
+        contested = bool(r.get("contested", False))
+
+        # Derive stance label from score + contested; ignore any "stance" field the LLM sends
+        stance = "Contested" if contested else _score_to_stance_label(score)
+
         raw_incentive = r.get("incentive_active")
         incentive_active = raw_incentive if raw_incentive in VALID_INCENTIVES else None
-        
+
+        raw_intensity = r.get("intensity")
+        intensity = int(raw_intensity) if isinstance(raw_intensity, (int, float)) and int(raw_intensity) in VALID_INTENSITIES else 2
+
+        raw_visibility = r.get("visibility", "mid")
+        visibility = raw_visibility if raw_visibility in VALID_VISIBILITIES else "mid"
+
+        raw_flip_risk = r.get("flip_risk", 0.0)
+        flip_risk = float(raw_flip_risk) if isinstance(raw_flip_risk, (int, float)) else 0.0
+        flip_risk = max(0.0, min(1.0, flip_risk))
+
+        # Auto-elevate contested agents to high flip_risk if LLM didn't signal it
+        if contested and flip_risk < 0.5:
+            flip_risk = max(flip_risk, 0.7)
+
         assigned_group_id = r.get("assigned_group_id", "")
 
         results.append(StanceResult(
             agent_id=agent_id,
             assigned_group_id=assigned_group_id,
-            stance=stance,          # type: ignore[arg-type]
+            stance=stance,                      # type: ignore[arg-type]
             score=score,
+            contested=contested,
             incentive_active=incentive_active,  # type: ignore[arg-type]
+            intensity=intensity,
+            visibility=visibility,
+            flip_risk=flip_risk,
             reasoning=r.get("reasoning", ""),
         ))
 

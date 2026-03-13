@@ -15,9 +15,11 @@ from backend.types import (
 )
 from backend.modules.timeline_propagator import propagate_timeline
 from backend.modules.output_formatter import format_run
+from backend.modules.relationship_builder import build_formal_graph_snapshot
 from backend.utils.persona_sampler import sample_personas
 from backend.utils.sim_logger import log_run_start, log_run_done, log_error
 from backend.utils.simulation_db import upsert_run, get_run, list_runs
+from backend.utils.graph_db import upsert_graph_snapshot
 
 router = APIRouter()
 
@@ -57,6 +59,16 @@ async def simulate(body: SimulateRequest):
                     # Update the cached run with the completed stage
                     from backend.types import StageOutput
                     run.timeline[stage] = StageOutput(**payload)
+                    graph_snapshot = build_formal_graph_snapshot(
+                        run_id=run.run_id,
+                        agents=run.agents,
+                        stage_output=run.timeline[stage],
+                    )
+                    try:
+                        upsert_graph_snapshot(graph_snapshot)
+                    except Exception as graph_error:
+                        # Keep simulation stream resilient even if graph DB is temporarily locked.
+                        log_error(run.run_id, stage, f"graph_persist_failed: {graph_error}")
                     upsert_run(run, status="running")
 
                 chunk = {"type": event_type, "stage": stage, **payload}

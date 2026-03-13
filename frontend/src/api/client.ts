@@ -5,6 +5,11 @@ import type {
   SimulationRun,
   ListSimulationsResponse,
   SimulationRunSummary,
+  GraphSnapshot,
+  GraphRetrieveRequest,
+  GraphRetrieveResponse,
+  ChatRequest,
+  ChatResponse,
 } from "@socioatlas/shared";
 
 const BASE = "/api";
@@ -87,4 +92,28 @@ export async function getSimulation(runId: string): Promise<SimulationRun> {
 export async function listSimulations(limit = 25): Promise<SimulationRunSummary[]> {
   const data = await request<ListSimulationsResponse>(`/simulate?limit=${limit}`);
   return data.runs;
+}
+
+export async function getGraphSnapshot(runId: string): Promise<GraphSnapshot> {
+  return request<GraphSnapshot>(`/graph/${runId}`);
+}
+
+export async function retrieveGraphContext(
+  runId: string,
+  body: GraphRetrieveRequest,
+): Promise<GraphRetrieveResponse> {
+  return request<GraphRetrieveResponse>(`/graph/${runId}/retrieve`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function chatWithGraph(
+  runId: string,
+  body: ChatRequest,
+): Promise<ChatResponse> {
+  return request<ChatResponse>(`/chat/${runId}`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }

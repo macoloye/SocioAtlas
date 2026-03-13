@@ -36,7 +36,11 @@ export interface StanceResult {
   assigned_group_id: string;
   stance: StanceLabel;
   score: StanceScore;
+  contested: boolean;
   incentive_active: IncentiveType | null;
+  intensity: 1 | 2 | 3;
+  visibility: "low" | "mid" | "high";
+  flip_risk: number;
   reasoning: string;
 }
 
@@ -92,4 +96,76 @@ export interface ListSimulationsResponse {
 export interface ApiError {
   error: string;
   message: string;
+}
+
+// ─── Graph formalization ─────────────────────────────────────────────────────
+
+export type GraphNodeType = "run" | "stage" | "agent" | "group";
+
+export type GraphEdgeType =
+  | "HAS_STAGE"
+  | "HAS_AGENT"
+  | "HAS_GROUP"
+  | "MEMBER_OF"
+  | "ALIGNS_WITH"
+  | "CONFLICTS_WITH"
+  | "COOPERATES_WITH"
+  | "COMPETES_WITH";
+
+export interface GraphNode {
+  id: string;
+  node_type: GraphNodeType;
+  label: string;
+  run_id: string;
+  stage: Stage | null;
+  attrs: Record<string, string | number | boolean | null>;
+}
+
+export interface GraphEdge {
+  id: string;
+  edge_type: GraphEdgeType;
+  source: string;
+  target: string;
+  run_id: string;
+  stage: Stage | null;
+  weight: number;
+  attrs: Record<string, string | number | boolean | null>;
+}
+
+export interface GraphSnapshot {
+  run_id: string;
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
+
+export interface GraphRetrieveRequest {
+  query: string;
+  stage?: Stage;
+  top_k?: number;
+}
+
+export interface GraphEvidence {
+  id: string;
+  kind: "node" | "edge";
+  label: string;
+  score: number;
+  stage: Stage | null;
+  details: string;
+}
+
+export interface GraphRetrieveResponse {
+  run_id: string;
+  query: string;
+  evidence: GraphEvidence[];
+}
+
+export interface ChatRequest {
+  query: string;
+  top_k?: number;
+}
+
+export interface ChatResponse {
+  answer: string;
+  evidence: GraphEvidence[];
+  stages_used: Stage[];
 }

@@ -11,13 +11,13 @@ MAX_CONCURRENT_REQUEST = int(os.getenv("MAX_CONCURRENT_REQUEST", "3"))
 worker_count = MAX_CONCURRENT_REQUEST if MAX_CONCURRENT_REQUEST > 0 else 1
 
 
-def _run_batch(event: str, stage: str, groups: list[Group], batch_agents: list[Agent]) -> StageOutput:
-    prompt = build_stance_prompt(event, stage, groups, batch_agents)
+def _run_batch(event: str, stage: str, groups: list[Group], batch_agents: list[Agent], persuadable_context: str = "") -> StageOutput:
+    prompt = build_stance_prompt(event, stage, groups, batch_agents, persuadable_context)
     raw = call_llm_sync(prompt)
     return parse_stance_response(raw)
 
 
-def run_stances(event: str, stage: str, groups: list[Group], agents: list[Agent]) -> StageOutput:
+def run_stances(event: str, stage: str, groups: list[Group], agents: list[Agent], persuadable_context: str = "") -> StageOutput:
     if not agents:
         return StageOutput(stage=stage, groups=groups, results=[], end_state=None)  # type: ignore[arg-type]
 
@@ -31,7 +31,7 @@ def run_stances(event: str, stage: str, groups: list[Group], agents: list[Agent]
 
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
         futures = {
-            executor.submit(_run_batch, event, stage, groups, batch): batch
+            executor.submit(_run_batch, event, stage, groups, batch, persuadable_context): batch
             for batch in batches
         }
         for future in as_completed(futures):

@@ -5,15 +5,17 @@ import { TimelineDrift } from "./components/TimelineDrift/TimelineDrift";
 import { CoalitionMap } from "./components/CoalitionMap/CoalitionMap";
 import { IncentiveBreakdown } from "./components/IncentiveBreakdown/IncentiveBreakdown";
 import { StageStream } from "./components/StageStream/StageStream";
+import { GraphChat } from "./components/GraphChat/GraphChat";
 import { useSimulationStore } from "./store/simulationStore";
 import { motion, AnimatePresence } from "framer-motion";
 
-type RightPanelTab = "matrix" | "drift" | "incentive";
+type RightPanelTab = "matrix" | "drift" | "incentive" | "chat";
 
 const RIGHT_TABS: { id: RightPanelTab; label: string }[] = [
   { id: "matrix", label: "Stance Matrix" },
   { id: "drift", label: "Timeline Drift" },
   { id: "incentive", label: "Incentive Breakdown" },
+  { id: "chat", label: "Graph Chat" },
 ];
 
 export default function App() {
@@ -185,6 +187,7 @@ export default function App() {
                   {activeRightTab === "matrix" && <StanceMatrix />}
                   {activeRightTab === "drift" && <TimelineDrift />}
                   {activeRightTab === "incentive" && <IncentiveBreakdown />}
+                  {activeRightTab === "chat" && <GraphChat />}
                 </div>
               </div>
             </div>

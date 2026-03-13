@@ -6,8 +6,9 @@ import type {
   StanceResult,
   StageEndState,
   SimulationRunSummary,
+  GraphEvidence,
 } from "@socioatlas/shared";
-import { getSimulation, listSimulations, streamSimulation } from "../api/client";
+import { chatWithGraph, getSimulation, listSimulations, streamSimulation } from "../api/client";
 
 // Partial progress within a single stage (updates as each LLM call completes)
 export interface StageProgress {
@@ -31,10 +32,16 @@ interface SimulationState {
   historyRefreshToken: number;
   isLoading: boolean;
   error: string | null;
+  chatLoading: boolean;
+  chatError: string | null;
+  chatAnswer: string;
+  chatEvidence: GraphEvidence[];
 
   submitEvent: (event: string, sampleSize?: number) => Promise<void>;
   loadHistory: () => Promise<void>;
   loadRun: (runId: string) => Promise<void>;
+  askGraphQuestion: (query: string, topK?: number) => Promise<void>;
+  clearChat: () => void;
   setStage: (stage: Stage) => void;
   selectAgent: (agentId: string | null) => void;
   reset: () => void;
@@ -70,6 +77,10 @@ export const useSimulationStore = create<SimulationState>((set) => ({
   historyRefreshToken: 0,
   isLoading: false,
   error: null,
+  chatLoading: false,
+  chatError: null,
+  chatAnswer: "",
+  chatEvidence: [],
 
   submitEvent: async (event: string, sampleSize?: number) => {
     set({ isLoading: true, error: null, selectedAgentId: null, run: null, stageProgress: {} });
@@ -199,12 +210,45 @@ export const useSimulationStore = create<SimulationState>((set) => ({
         activeStage,
         selectedAgentId: null,
         isLoading: false,
+        chatLoading: false,
+        chatError: null,
+        chatAnswer: "",
+        chatEvidence: [],
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load simulation";
       set({ isLoading: false, error: message });
     }
   },
+
+  askGraphQuestion: async (query: string, topK?: number) => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      set({ chatError: "Query is required." });
+      return;
+    }
+    const runId = useSimulationStore.getState().run?.run_id;
+    if (!runId) {
+      set({ chatError: "Load or run a simulation first." });
+      return;
+    }
+
+    set({ chatLoading: true, chatError: null });
+    try {
+      const response = await chatWithGraph(runId, { query: trimmed, top_k: topK });
+      set({
+        chatLoading: false,
+        chatError: null,
+        chatAnswer: response.answer,
+        chatEvidence: response.evidence,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Chat failed";
+      set({ chatLoading: false, chatError: message });
+    }
+  },
+
+  clearChat: () => set({ chatAnswer: "", chatEvidence: [], chatError: null }),
 
   setStage: (stage) => set({ activeStage: stage }),
   selectAgent: (agentId) => set({ selectedAgentId: agentId }),
@@ -216,5 +260,9 @@ export const useSimulationStore = create<SimulationState>((set) => ({
       activeStage: "T1",
       selectedAgentId: null,
       error: null,
+      chatLoading: false,
+      chatError: null,
+      chatAnswer: "",
+      chatEvidence: [],
     }),
 }));

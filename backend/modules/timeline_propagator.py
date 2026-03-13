@@ -8,6 +8,7 @@ from backend.utils.sim_logger import (
     log_stage_start, log_groups_done,
     log_stances_done, log_end_state, log_stage_done,
 )
+from backend.utils.prompts import build_stage_context
 
 SIMULATED_STAGES = ["T1", "T2", "T3", "T4", "T5"]
 
@@ -28,6 +29,7 @@ async def propagate_timeline(
     current_event = initial_event
     groups = None
     previous_event = None
+    persuadable_context = ""
 
     for stageidx, stage in enumerate(SIMULATED_STAGES):
         log_stage_start(run_id, stage, current_event)
@@ -46,7 +48,7 @@ async def propagate_timeline(
 
         # ── LLM call 2: run stances ───────────────────────────────────────
         yield ("transition", stage, {"step": "stances", "message": "Running stances"})
-        stances = await asyncio.to_thread(run_stances, current_event, stage, groups, agents)
+        stances = await asyncio.to_thread(run_stances, current_event, stage, groups, agents, persuadable_context)
         log_stances_done(run_id, stage, len(stances.results))
         yield ("stances", stage, {"results": [r.model_dump() for r in stances.results]})
 
@@ -62,3 +64,5 @@ async def propagate_timeline(
 
         current_event = end_state.new_event_state
         previous_event = current_event
+        # Build context for the next stage from this stage's persuadable/contested agents
+        persuadable_context = build_stage_context(stances.results)
