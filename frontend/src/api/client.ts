@@ -10,6 +10,8 @@ import type {
   GraphRetrieveResponse,
   ChatRequest,
   ChatResponse,
+  EndStateSelectionRequest,
+  EndStateSelectionResponse,
 } from "@socioatlas/shared";
 
 const BASE = "/api";
@@ -113,6 +115,16 @@ export async function chatWithGraph(
   body: ChatRequest,
 ): Promise<ChatResponse> {
   return request<ChatResponse>(`/chat/${runId}`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function submitEndStateSelection(
+  runId: string,
+  body: EndStateSelectionRequest,
+): Promise<EndStateSelectionResponse> {
+  return request<EndStateSelectionResponse>(`/simulate/${runId}/select-end-state`, {
     method: "POST",
     body: JSON.stringify(body),
   });

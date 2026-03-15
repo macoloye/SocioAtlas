@@ -133,7 +133,12 @@ def parse_stance_response(raw: str) -> StageOutput:
         if contested and flip_risk < 0.5:
             flip_risk = max(flip_risk, 0.7)
 
-        assigned_group_id = r.get("assigned_group_id", "")
+        raw_assigned_group_id = r.get("assigned_group_id")
+        assigned_group_id = (
+            raw_assigned_group_id
+            if isinstance(raw_assigned_group_id, str) and raw_assigned_group_id
+            else "unassigned"
+        )
 
         results.append(StanceResult(
             agent_id=agent_id,
@@ -165,7 +170,48 @@ def parse_end_state_response(raw: str) -> StageEndState:
     if not isinstance(new_event_state, str) or not new_event_state:
         raise ValidationError("missing or invalid new_event_state")
 
+    raw_options = parsed.get("event_state_options", [])
+    options = []
+
+    if isinstance(raw_options, list):
+        for i, item in enumerate(raw_options):
+            if not isinstance(item, dict):
+                continue
+            option_id = item.get("option_id")
+            label = item.get("label")
+            next_event_state = item.get("next_event_state")
+            is_default = bool(item.get("is_default", False))
+
+            if not isinstance(option_id, str) or not option_id.strip():
+                option_id = f"option_{i + 1}"
+            if not isinstance(label, str) or not label.strip():
+                label = f"Scenario {i + 1}"
+            if not isinstance(next_event_state, str) or not next_event_state.strip():
+                continue
+
+            options.append(
+                {
+                    "option_id": option_id,
+                    "label": label,
+                    "next_event_state": next_event_state,
+                    "is_default": is_default,
+                }
+            )
+
+    if options:
+        default_count = sum(1 for o in options if o["is_default"])
+        if default_count == 0:
+            options[0]["is_default"] = True
+        elif default_count > 1:
+            first = True
+            for option in options:
+                if option["is_default"] and first:
+                    first = False
+                    continue
+                option["is_default"] = False
+
     return StageEndState(
         social_response_summary=social_response_summary,
         new_event_state=new_event_state,
+        event_state_options=options,
     )

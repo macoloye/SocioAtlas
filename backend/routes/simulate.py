@@ -12,8 +12,10 @@ from backend.types import (
     SimulationRunSummary,
     SimulationRun,
     Agent,
+    EndStateSelectionRequest,
+    EndStateSelectionResponse,
 )
-from backend.modules.timeline_propagator import propagate_timeline
+from backend.modules.timeline_propagator import propagate_timeline, submit_end_state_choice
 from backend.modules.output_formatter import format_run
 from backend.modules.relationship_builder import build_formal_graph_snapshot
 from backend.utils.persona_sampler import sample_personas
@@ -121,3 +123,17 @@ async def list_simulations(limit: int = 25) -> ListSimulationsResponse:
     return ListSimulationsResponse(
         runs=[SimulationRunSummary(**record) for record in records]
     )
+
+
+@router.post("/{run_id}/select-end-state", response_model=EndStateSelectionResponse)
+async def select_end_state(run_id: str, body: EndStateSelectionRequest) -> EndStateSelectionResponse:
+    ok, message = submit_end_state_choice(
+        run_id=run_id,
+        stage=body.stage,
+        chosen_event_state=body.chosen_event_state,
+        selected_option_id=body.selected_option_id,
+        selection_source=body.selection_source,
+    )
+    if not ok:
+        raise HTTPException(status_code=409, detail=message)
+    return EndStateSelectionResponse(accepted=True, message=message)

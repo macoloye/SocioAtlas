@@ -167,7 +167,49 @@ def build_end_state_prompt(event: str, stage_label: str, groups: list, stances: 
         
     group_stance_summary = "\n".join(group_summary_lines)
     
-    return f"""You are a simulation engine summarizing the outcome of a timeline stage. 
+    if stage_label in ["T1", "T2", "T3", "T4"]:
+        return f"""You are a simulation engine summarizing the outcome of a timeline stage.
+Based on the current event, the groups involved, and the agents' stances, summarize the social response and outcome.
+
+Then produce 3 different and probable NEXT EVENT STATE options for the next stage.
+Each option must be realistically plausible and must differ in how an authority or the event subject responds.
+
+Exactly one option must be the most probable default and set `is_default` to true.
+
+CURRENT EVENT: {event}
+TIMELINE STAGE: {stage_label}
+
+GROUP SUMMARY FOR THIS STAGE:
+{group_stance_summary}
+
+Return ONLY valid JSON. No explanation outside the JSON block.
+
+{{
+  "social_response_summary": "1-2 paragraphs summarizing the macro reaction, dominant groups, and shifts in public opinion or policy.",
+  "new_event_state": "Must match exactly the next_event_state from the option where is_default is true.",
+  "event_state_options": [
+    {{
+      "option_id": "option_1",
+      "label": "Short title",
+      "next_event_state": "Concrete next event state branch 1.",
+      "is_default": true
+    }},
+    {{
+      "option_id": "option_2",
+      "label": "Short title",
+      "next_event_state": "Concrete next event state branch 2.",
+      "is_default": false
+    }},
+    {{
+      "option_id": "option_3",
+      "label": "Short title",
+      "next_event_state": "Concrete next event state branch 3.",
+      "is_default": false
+    }}
+  ]
+}}"""
+
+    return f"""You are a simulation engine summarizing the outcome of a timeline stage.
 Based on the current event, the groups involved, and the agents' stances, summarize the social response and outcome. Then, generate the new "event state" which will serve as the reality for the next stage.
 
 CURRENT EVENT: {event}

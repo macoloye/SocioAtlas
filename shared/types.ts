@@ -47,6 +47,16 @@ export interface StanceResult {
 export interface StageEndState {
   social_response_summary: string;
   new_event_state: string;
+  event_state_options: EventStateOption[];
+  selected_option_id?: string | null;
+  selection_source?: "default_timeout" | "user_option" | "user_custom" | null;
+}
+
+export interface EventStateOption {
+  option_id: string;
+  label: string;
+  next_event_state: string;
+  is_default: boolean;
 }
 
 export interface StageOutput {
@@ -75,6 +85,18 @@ export interface SimulateRequest {
 
 export interface SimulateResponse {
   run: SimulationRun;
+}
+
+export interface EndStateSelectionRequest {
+  stage: Stage;
+  chosen_event_state: string;
+  selected_option_id?: string;
+  selection_source?: "user_option" | "user_custom";
+}
+
+export interface EndStateSelectionResponse {
+  accepted: boolean;
+  message: string;
 }
 
 export interface GetSimulationResponse {

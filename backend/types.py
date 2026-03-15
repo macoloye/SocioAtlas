@@ -54,6 +54,18 @@ class StanceResult(BaseModel):
 class StageEndState(BaseModel):
     social_response_summary: str
     new_event_state: str
+    event_state_options: list["EventStateOption"] = Field(default_factory=list)
+    selected_option_id: Optional[str] = None
+    selection_source: Optional[
+        Literal["default_timeout", "user_option", "user_custom"]
+    ] = None
+
+
+class EventStateOption(BaseModel):
+    option_id: str
+    label: str
+    next_event_state: str
+    is_default: bool = False
 
 
 class StageOutput(BaseModel):
@@ -82,6 +94,18 @@ class SimulateRequest(BaseModel):
 
 class SimulateResponse(BaseModel):
     run: SimulationRun
+
+
+class EndStateSelectionRequest(BaseModel):
+    stage: Stage
+    chosen_event_state: str
+    selected_option_id: Optional[str] = None
+    selection_source: Literal["user_option", "user_custom"] = "user_option"
+
+
+class EndStateSelectionResponse(BaseModel):
+    accepted: bool
+    message: str
 
 
 class GetSimulationResponse(BaseModel):

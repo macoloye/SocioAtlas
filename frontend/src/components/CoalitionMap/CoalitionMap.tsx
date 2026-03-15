@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import Graph from "graphology";
-import Sigma from "sigma";
+import { useEffect, useMemo, useState } from "react";
 import type { GraphEdge, GraphNode, GraphSnapshot } from "@socioatlas/shared";
 import { useSimulationStore } from "../../store/simulationStore";
 import { getGraphSnapshot } from "../../api/client";
+import { CoalitionGraphD3 } from "./CoalitionGraphD3";
 
 type ViewMode = "all" | "groups" | "support" | "oppose";
 type RenderNode = GraphNode & {
@@ -67,12 +66,11 @@ function incentiveLabel(value: string | undefined) {
 
 export function CoalitionMap() {
   const { run, selectAgent, selectedAgentId, activeStage } = useSimulationStore();
-  const sigmaContainerRef = useRef<HTMLDivElement | null>(null);
-  const sigmaRef = useRef<Sigma | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [snapshot, setSnapshot] = useState<GraphSnapshot | null>(null);
   const [graphError, setGraphError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("all");
+  const [resetToken, setResetToken] = useState(0);
   const completedStageCount = run ? Object.keys(run.timeline).length : 0;
 
   useEffect(() => {
@@ -118,9 +116,14 @@ export function CoalitionMap() {
     }
 
     const baseNodeById = new Map(snapshot.nodes.map((node) => [node.id, node] as const));
-    const membershipEdges = snapshot.edges.filter(
-      (edge) => edge.edge_type === "MEMBER_OF" && edge.stage === activeStage,
+    const stageEdges = snapshot.edges.filter(
+      (edge) =>
+        edge.stage === activeStage &&
+        edge.edge_type !== "HAS_STAGE" &&
+        edge.edge_type !== "HAS_AGENT" &&
+        edge.edge_type !== "HAS_GROUP",
     );
+    const membershipEdges = stageEdges.filter((edge) => edge.edge_type === "MEMBER_OF");
     const membershipByAgentId = new Map(membershipEdges.map((edge) => [edge.source, edge] as const));
 
     const allGroupNodes = Array.from(
@@ -202,10 +205,10 @@ export function CoalitionMap() {
       return rightSize - leftSize;
     });
 
-    const columns = Math.min(2, Math.max(1, Math.ceil(Math.sqrt(sortedGroups.length))));
+    const columns = Math.min(3, Math.max(1, Math.ceil(Math.sqrt(sortedGroups.length))));
     const rows = Math.max(1, Math.ceil(sortedGroups.length / columns));
-    const spacingX = 14.5;
-    const spacingY = 11.5;
+    const spacingX = 18;
+    const spacingY = 14;
     const positionedNodes: PositionedRenderNode[] = [];
     const clustersOut: GroupCluster[] = [];
 
@@ -231,10 +234,11 @@ export function CoalitionMap() {
         const renderedAgent = renderedNodeById.get(agentId);
         if (!renderedAgent) return;
         const angle = (memberIndex / Math.max(members.length, 1)) * Math.PI * 2;
-        const orbitRadius = 3.5 + Math.min(2.8, members.length * 0.16);
+        const orbitRadius = 4.6 + Math.min(4.4, members.length * 0.24);
+        const labelEvery = members.length > 8 ? 4 : members.length > 4 ? 2 : 1;
         const positionedAgent: PositionedRenderNode = {
           ...renderedAgent,
-          showLabel: memberIndex < 2,
+          showLabel: memberIndex % labelEvery === 0,
           x: groupX + Math.cos(angle) * orbitRadius,
           y: groupY + Math.sin(angle) * orbitRadius,
         };
@@ -248,12 +252,21 @@ export function CoalitionMap() {
       });
     });
 
-    const visibleEdges =
-      viewMode === "groups"
-        ? []
-        : membershipEdges.filter(
-            (edge) => visibleAgentIds.has(edge.source) && renderedNodeById.has(edge.target),
-          );
+    const visibleNodeIds = new Set(renderedNodeById.keys());
+    const visibleEdges = stageEdges.filter((edge) => {
+      if (!visibleNodeIds.has(edge.source) || !visibleNodeIds.has(edge.target)) {
+        return false;
+      }
+      const sourceNode = renderedNodeById.get(edge.source);
+      const targetNode = renderedNodeById.get(edge.target);
+      // if (sourceNode?.node_type === "agent" && targetNode?.node_type === "agent") {
+      //   return false;
+      // }
+      if (viewMode === "groups") {
+        return edge.edge_type === "COOPERATES_WITH" || edge.edge_type === "COMPETES_WITH";
+      }
+      return true;
+    });
 
     return {
       nodes: positionedNodes,
@@ -278,66 +291,6 @@ export function CoalitionMap() {
     selectAgent(null);
   };
 
-  useEffect(() => {
-    if (!sigmaContainerRef.current || !run || !nodes.length) return;
-
-    const graph = new Graph();
-    nodes.forEach((node) => {
-      graph.addNode(node.id, {
-        label:
-          node.node_type === "group"
-            ? shortenLabel(node.label, 28)
-            : node.id === selectedNodeId || node.showLabel
-              ? shortenLabel(node.label, 30)
-              : "",
-        size: node.size,
-        color: node.id === selectedNodeId ? "#facc15" : node.color,
-        labelColor: node.node_type === "group" ? "#c7d2fe" : "#e5e7eb",
-        x: node.x,
-        y: node.y,
-      });
-    });
-
-    edges.forEach((edge) => {
-      if (!graph.hasNode(edge.source) || !graph.hasNode(edge.target)) return;
-      graph.addEdgeWithKey(edge.id, edge.source, edge.target, {
-        color: "#888780",
-        size: 1.1,
-        label: "",
-      });
-    });
-
-    if (sigmaRef.current) {
-      sigmaRef.current.kill();
-      sigmaRef.current = null;
-    }
-
-    const renderer = new Sigma(graph, sigmaContainerRef.current, {
-      renderEdgeLabels: false,
-      labelDensity: 1,
-      labelGridCellSize: 140,
-      labelRenderedSizeThreshold: 6,
-      minCameraRatio: 0.4,
-      maxCameraRatio: 3,
-      defaultEdgeType: "line",
-      allowInvalidContainer: true,
-    });
-
-    renderer.on("clickNode", ({ node }) => {
-      handleNodeSelection(nodeById.get(node)?.id ?? null);
-    });
-    renderer.on("clickStage", () => {
-      handleNodeSelection(null);
-    });
-
-    sigmaRef.current = renderer;
-
-    return () => {
-      renderer.kill();
-      sigmaRef.current = null;
-    };
-  }, [run, nodes, edges, nodeById, selectedNodeId, selectAgent, selectedAgentId]);
-
   if (!run) return null;
 
   const selectedNode = selectedNodeId ? nodeById.get(selectedNodeId) ?? null : null;
@@ -358,7 +311,7 @@ export function CoalitionMap() {
 
   const resetView = () => {
     handleNodeSelection(null);
-    sigmaRef.current?.getCamera().animate({ ratio: 1, x: 0.5, y: 0.5 }, { duration: 200 });
+    setResetToken((value) => value + 1);
   };
 
   return (
@@ -429,7 +382,13 @@ export function CoalitionMap() {
           ) : nodes.length === 0 ? (
             <div className="coalition-empty">No nodes available for this view yet.</div>
           ) : (
-            <div className="sigma-canvas" ref={sigmaContainerRef} />
+            <CoalitionGraphD3
+              nodes={nodes}
+              edges={edges}
+              selectedNodeId={selectedNodeId}
+              onSelectNode={handleNodeSelection}
+              resetToken={resetToken}
+            />
           )}
         </div>
 

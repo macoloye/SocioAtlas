@@ -5,20 +5,35 @@ import type {
   Group,
   StanceResult,
   StageEndState,
+  EventStateOption,
   SimulationRunSummary,
   GraphEvidence,
 } from "@socioatlas/shared";
-import { chatWithGraph, getSimulation, listSimulations, streamSimulation } from "../api/client";
+import {
+  chatWithGraph,
+  getSimulation,
+  listSimulations,
+  streamSimulation,
+  submitEndStateSelection,
+} from "../api/client";
 
 // Partial progress within a single stage (updates as each LLM call completes)
 export interface StageProgress {
-  status: "starting" | "transition" | "groups_done" | "stances_done" | "done";
+  status:
+    | "starting"
+    | "transition"
+    | "groups_done"
+    | "stances_done"
+    | "awaiting_choice"
+    | "done";
   transitionStep?: "groups" | "stances" | "end_state";
   transitionMessage?: string;
   current_event?: string;
   groups?: Group[];
   results?: StanceResult[];
   end_state?: StageEndState;
+  end_state_options?: EventStateOption[];
+  timeout_seconds?: number;
 }
 
 interface SimulationState {
@@ -36,8 +51,15 @@ interface SimulationState {
   chatError: string | null;
   chatAnswer: string;
   chatEvidence: GraphEvidence[];
+  selectingEndStateStage: Stage | null;
 
   submitEvent: (event: string, sampleSize?: number) => Promise<void>;
+  selectEndState: (
+    stage: Stage,
+    chosenEventState: string,
+    selectedOptionId?: string,
+    selectionSource?: "user_option" | "user_custom",
+  ) => Promise<void>;
   loadHistory: () => Promise<void>;
   loadRun: (runId: string) => Promise<void>;
   askGraphQuestion: (query: string, topK?: number) => Promise<void>;
@@ -61,6 +83,7 @@ function buildStageProgressFromRun(run: SimulationRun): Partial<Record<Stage, St
       groups: output.groups,
       results: output.results,
       end_state: output.end_state,
+      end_state_options: output.end_state.event_state_options,
     };
   }
   return progress;
@@ -81,16 +104,24 @@ export const useSimulationStore = create<SimulationState>((set) => ({
   chatError: null,
   chatAnswer: "",
   chatEvidence: [],
+  selectingEndStateStage: null,
 
   submitEvent: async (event: string, sampleSize?: number) => {
-    set({ isLoading: true, error: null, selectedAgentId: null, run: null, stageProgress: {} });
+    set({
+      isLoading: true,
+      error: null,
+      selectedAgentId: null,
+      run: null,
+      stageProgress: {},
+      selectingEndStateStage: null,
+    });
+
     try {
       for await (const chunk of streamSimulation(event, sampleSize)) {
         const { type, stage } = chunk;
 
         if (type === "init") {
           set({ run: chunk.run, activeStage: "T1", isLoading: true });
-
         } else if (type === "stage_start") {
           set((state) => ({
             stageProgress: {
@@ -104,7 +135,6 @@ export const useSimulationStore = create<SimulationState>((set) => ({
             },
             activeStage: stage as Stage,
           }));
-
         } else if (type === "transition") {
           set((state) => ({
             stageProgress: {
@@ -117,7 +147,6 @@ export const useSimulationStore = create<SimulationState>((set) => ({
               },
             },
           }));
-
         } else if (type === "groups") {
           set((state) => ({
             stageProgress: {
@@ -131,7 +160,6 @@ export const useSimulationStore = create<SimulationState>((set) => ({
               },
             },
           }));
-
         } else if (type === "stances") {
           set((state) => ({
             stageProgress: {
@@ -145,9 +173,51 @@ export const useSimulationStore = create<SimulationState>((set) => ({
               },
             },
           }));
-
+        } else if (type === "awaiting_end_state_choice") {
+          set((state) => ({
+            stageProgress: {
+              ...state.stageProgress,
+              [stage]: {
+                ...state.stageProgress[stage as Stage],
+                status: "awaiting_choice",
+                transitionStep: "end_state",
+                transitionMessage: "Select next event state",
+                end_state: chunk.end_state,
+                end_state_options: chunk.end_state?.event_state_options ?? [],
+                timeout_seconds: chunk.timeout_seconds ?? 6,
+              },
+            },
+            activeStage: stage as Stage,
+          }));
+        } else if (type === "end_state_selected") {
+          set((state) => {
+            const prev = state.stageProgress[stage as Stage];
+            if (!prev?.end_state) {
+              return { selectingEndStateStage: null };
+            }
+            return {
+              selectingEndStateStage: null,
+              stageProgress: {
+                ...state.stageProgress,
+                [stage]: {
+                  ...prev,
+                  status: "transition",
+                  transitionStep: "end_state",
+                  transitionMessage:
+                    chunk.selection_source === "default_timeout"
+                      ? "Default selected"
+                      : "Selection applied",
+                  end_state: {
+                    ...prev.end_state,
+                    new_event_state: chunk.new_event_state,
+                    selected_option_id: chunk.selected_option_id,
+                    selection_source: chunk.selection_source,
+                  },
+                },
+              },
+            };
+          });
         } else if (type === "stage_done") {
-          // Full stage complete — update both the run timeline and progress
           set((state) => {
             if (!state.run) return state;
             return {
@@ -165,21 +235,63 @@ export const useSimulationStore = create<SimulationState>((set) => ({
                   status: "done",
                   transitionMessage: "Stage complete",
                   end_state: chunk.end_state,
+                  end_state_options: chunk.end_state?.event_state_options ?? [],
                 },
               },
             };
           });
-
         } else if (type === "done") {
-          set((state) => ({ isLoading: false, historyRefreshToken: state.historyRefreshToken + 1 }));
-
+          set((state) => ({
+            isLoading: false,
+            selectingEndStateStage: null,
+            historyRefreshToken: state.historyRefreshToken + 1,
+          }));
         } else if (type === "error") {
-          set({ isLoading: false, error: chunk.detail || "Simulation error" });
+          set({
+            isLoading: false,
+            selectingEndStateStage: null,
+            error: chunk.detail || "Simulation error",
+          });
         }
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Simulation failed";
-      set({ isLoading: false, error: message });
+      set({ isLoading: false, selectingEndStateStage: null, error: message });
+    }
+  },
+
+  selectEndState: async (
+    stage: Stage,
+    chosenEventState: string,
+    selectedOptionId?: string,
+    selectionSource: "user_option" | "user_custom" = "user_option",
+  ) => {
+    const { run, selectingEndStateStage } = useSimulationStore.getState();
+    if (!run) return;
+    if (selectingEndStateStage === stage) return;
+
+    const chosen = chosenEventState.trim();
+    if (!chosen) return;
+
+    set({ selectingEndStateStage: stage });
+    try {
+      await submitEndStateSelection(run.run_id, {
+        stage,
+        chosen_event_state: chosen,
+        selected_option_id: selectedOptionId,
+        selection_source: selectionSource,
+      });
+    } catch {
+      set((state) => ({
+        selectingEndStateStage: null,
+        stageProgress: {
+          ...state.stageProgress,
+          [stage]: {
+            ...state.stageProgress[stage],
+            transitionMessage: "Selection failed, waiting for default",
+          },
+        },
+      }));
     }
   },
 
@@ -214,6 +326,7 @@ export const useSimulationStore = create<SimulationState>((set) => ({
         chatError: null,
         chatAnswer: "",
         chatEvidence: [],
+        selectingEndStateStage: null,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load simulation";
@@ -264,5 +377,6 @@ export const useSimulationStore = create<SimulationState>((set) => ({
       chatError: null,
       chatAnswer: "",
       chatEvidence: [],
+      selectingEndStateStage: null,
     }),
 }));

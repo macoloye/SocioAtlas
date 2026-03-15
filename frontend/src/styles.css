@@ -724,6 +724,44 @@ button {
     linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
 }
 
+.coalition-d3-canvas svg {
+  width: 100%;
+  height: 100%;
+  min-height: 660px;
+}
+
+.coalition-d3-canvas .d3-edge {
+  transition: stroke-opacity 140ms ease, stroke-width 140ms ease;
+  animation: coalition-edge-flow 1.4s linear infinite;
+}
+
+.coalition-d3-canvas .d3-node {
+  transition: stroke-width 140ms ease, filter 140ms ease;
+}
+
+.coalition-d3-canvas .d3-node-group {
+  filter: drop-shadow(0 0 10px rgba(79, 70, 229, 0.18));
+}
+
+.coalition-d3-canvas .d3-node-agent {
+  filter: drop-shadow(0 0 7px rgba(56, 189, 248, 0.12));
+}
+
+.coalition-d3-canvas .d3-node:hover {
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.28));
+}
+
+.coalition-d3-canvas .d3-node-label {
+  letter-spacing: 0.01em;
+  dominant-baseline: middle;
+}
+
+@keyframes coalition-edge-flow {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
 .coalition-empty {
   padding: 1rem 1.25rem;
   color: var(--text-muted);
@@ -1378,6 +1416,163 @@ button {
   border-left: 2px solid var(--accent);
   padding-left: 0.75rem;
   font-style: italic;
+}
+
+.end-state-picker {
+  margin-top: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: color-mix(in srgb, var(--surface2) 80%, transparent);
+}
+
+.end-state-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.end-state-picker-title {
+  font-size: 0.76rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.end-state-picker-timer {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.end-state-picker-timer svg {
+  position: absolute;
+  transform: rotate(-90deg);
+}
+
+.timer-ring-bg {
+  fill: none;
+  stroke: color-mix(in srgb, var(--border) 80%, transparent);
+  stroke-width: 4;
+}
+
+.timer-ring-fg {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 4;
+  transition: stroke-dashoffset 0.1s linear;
+}
+
+.end-state-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.end-state-option,
+.end-state-custom-box {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.55rem;
+  background: var(--surface);
+}
+
+.end-state-option {
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.end-state-option:hover:not(:disabled) {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.end-state-option.default {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.end-state-option:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.end-state-option-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-bottom: 0.35rem;
+}
+
+.end-state-option-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.end-state-default-chip {
+  font-size: 0.67rem;
+  color: #111;
+  background: var(--accent);
+  border-radius: 99px;
+  padding: 0.08rem 0.45rem;
+  font-weight: 700;
+}
+
+.end-state-option p {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.end-state-custom-box textarea {
+  width: 100%;
+  resize: vertical;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  padding: 0.45rem;
+  font-size: 0.8rem;
+  margin-bottom: 0.45rem;
+}
+
+.end-state-custom-submit {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.end-state-custom-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.end-state-picker-note {
+  margin-top: 0.45rem;
+  font-size: 0.73rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 900px) {
+  .end-state-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ── Stage btn disabled ───────────────────────────────────────────────────── */
