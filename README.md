@@ -1,6 +1,6 @@
-# 🧠 SocioAtlas
+# SocioAtlas
 
-**Watch how society reacts to your idea in real time.** Simulate events, policies, and products across diverse communities. See which groups align, where conflicts emerge, and how coalitions shift—all powered by diverse AI personas with genuine motivations.
+SocioAtlas is an AI-powered social simulation workspace for testing how personas, groups, and coalitions react to an event over time. Describe a policy, product launch, crisis, or narrative shift, then inspect how incentives, alliances, and conflicts evolve from initial reaction through stabilization.
 
 ---
 
@@ -62,7 +62,7 @@ Find personas you care about and see exactly how they respond:
 - Query historical runs to see patterns
 - Compare different scenarios side-by-side
 
-See [`SIMULATION.md`](./SIMULATION.md) for technical deep dive.
+See [`docs/SIMULATION.md`](./docs/SIMULATION.md) for the technical deep dive.
 
 ---
 
@@ -83,7 +83,7 @@ See [`SIMULATION.md`](./SIMULATION.md) for technical deep dive.
    cp .env.example .env 
    ```
 
-2. **Configure environment** — Create `.env` in the `backend` directory:
+2. **Configure environment** — Create `.env` in the repo root:
    ```bash
    OPENAI_API_KEY=your_api_key_here
    MODEL_NAME=gpt-4-mini            # or gpt-4, claude-3.5-sonnet, etc.
@@ -94,27 +94,20 @@ See [`SIMULATION.md`](./SIMULATION.md) for technical deep dive.
 
 3. **Install dependencies:**
    ```bash
-   # Backend
-   cd backend
-   pip install -r requirements.txt
-   
-   # Frontend
-   cd ../frontend
    npm install
+   python -m pip install -r backend/requirements.txt
    ```
 
 4. **Run the app** — Open two terminals:
 
    **Terminal 1 (Backend API):**
    ```bash
-   cd backend
-   python -m backend.server
+   npm run dev:backend
    ```
 
    **Terminal 2 (Frontend dev server):**
    ```bash
-   cd frontend
-   npm run dev
+   npm run dev:frontend
    ```
 
 5. **Open in browser** — Navigate to `http://localhost:5173` (or the URL printed in your terminal)
@@ -137,7 +130,7 @@ Every stance has a root cause:
 - **Survival** — Safety, security, health
 - **Moral** — Justice, fairness, ethics
 
-See [`INCENTIVES.md`](./INCENTIVES.md) for the full framework.
+See [`docs/INCENTIVES.md`](./docs/INCENTIVES.md) for the full framework.
 
 ### 4. **Stances Evolve**
 Agents don't lock into positions. They shift as new information spreads, coalitions realign, and pressure mounts. Stage T5 isn't "final"—it's where this round of the conversation settles.
@@ -163,10 +156,10 @@ High-level documentation:
 
 | File | Content |
 |---|---|
-| [`GROUPS.md`](./GROUPS.md) | Agent pool and example stance-based groups |
-| [`INCENTIVES.md`](./INCENTIVES.md) | The 5 incentive types that explain every stance |
-| [`TIMELINE.md`](./TIMELINE.md) | T0–T5 mechanics — who acts when and why |
-| [`SIMULATION.md`](./SIMULATION.md) | Simulation pipeline and visualization details |
+| [`docs/GROUPS.md`](./docs/GROUPS.md) | Agent pool and example stance-based groups |
+| [`docs/INCENTIVES.md`](./docs/INCENTIVES.md) | The 5 incentive types that explain every stance |
+| [`docs/TIMELINE.md`](./docs/TIMELINE.md) | T0–T5 mechanics — who acts when and why |
+| [`docs/SIMULATION.md`](./docs/SIMULATION.md) | Simulation pipeline and visualization details |
 
 Key code areas:
 

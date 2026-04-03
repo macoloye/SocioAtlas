@@ -1,7 +1,28 @@
 {
   "name": "socioatlas",
   "version": "1.0.0",
+  "description": "AI-powered social simulation platform for exploring how personas, groups, and coalitions react to events over time.",
   "private": true,
+  "homepage": "https://github.com/macoloye/SocioAtlas",
+  "bugs": {
+    "url": "https://github.com/macoloye/SocioAtlas/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/macoloye/SocioAtlas.git"
+  },
+  "keywords": [
+    "social-simulation",
+    "agent-based-modeling",
+    "multi-agent",
+    "fastapi",
+    "react",
+    "llm",
+    "policy-analysis",
+    "scenario-planning",
+    "network-analysis",
+    "visualization"
+  ],
   "workspaces": [
     "shared",
     "frontend"
