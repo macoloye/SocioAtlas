@@ -1778,3 +1778,191 @@ button {
   border-radius: 4px;
   border: 1px solid var(--border);
 }
+
+/* ── Refinement plan implementations ─────────────────────────────────────── */
+
+.agent-runtime-estimate {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.dashboard-insights {
+  margin-bottom: 1rem;
+}
+
+.insight-tray {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.8rem 0.9rem;
+}
+
+.insight-tray-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.7rem;
+}
+
+.insight-tray-header h3 {
+  font-size: 0.95rem;
+}
+
+.insight-tray-header p {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.insight-clear-btn,
+.insight-remove-btn,
+.pin-insight-btn,
+.matrix-pin-btn,
+.insight-stage-link {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  font-size: 0.74rem;
+  padding: 0.22rem 0.5rem;
+}
+
+.insight-empty {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.insight-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.insight-item {
+  background: #121622;
+  border: 1px solid #232b3d;
+  border-radius: 8px;
+  padding: 0.55rem 0.6rem;
+}
+
+.insight-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.insight-chip {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.insight-item h4 {
+  font-size: 0.82rem;
+  margin-bottom: 0.2rem;
+}
+
+.insight-item p {
+  font-size: 0.77rem;
+  color: var(--text-muted);
+  margin-bottom: 0.45rem;
+}
+
+.stage-status-rail {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-bottom: 0.65rem;
+}
+
+.stage-rail-item {
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 0.42rem 0.5rem;
+}
+
+.stage-rail-item .stage-rail-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.stage-rail-time {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.stage-rail-item.complete {
+  border-color: color-mix(in srgb, var(--green) 50%, var(--border));
+}
+
+.stage-rail-item.running {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+}
+
+.stage-rail-item.waiting {
+  border-color: color-mix(in srgb, var(--yellow) 55%, var(--border));
+}
+
+.stage-rail-item.active {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+.stage-delta-card {
+  margin-bottom: 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface2) 72%, transparent);
+  padding: 0.5rem 0.6rem;
+}
+
+.stage-delta-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.45rem;
+  gap: 0.5rem;
+  font-size: 0.76rem;
+}
+
+.stage-delta-grid {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 0.3rem;
+  font-size: 0.76rem;
+}
+
+.stage-delta-card p {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.group-header-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.group-header-row .group-header {
+  flex: 1;
+}
+
+.matrix-pin-btn {
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.agent-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.agent-row .agent-persona {
+  flex: 1;
+}
