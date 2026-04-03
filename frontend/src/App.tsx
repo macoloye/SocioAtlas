@@ -6,6 +6,7 @@ import { CoalitionMap } from "./components/CoalitionMap/CoalitionMap";
 import { IncentiveBreakdown } from "./components/IncentiveBreakdown/IncentiveBreakdown";
 import { StageStream } from "./components/StageStream/StageStream";
 import { GraphChat } from "./components/GraphChat/GraphChat";
+import { InsightTray } from "./components/InsightTray/InsightTray";
 import { useSimulationStore } from "./store/simulationStore";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -161,6 +162,10 @@ export default function App() {
             {/* Top: Stage Stream */}
             <div className="dashboard-top">
                 <StageStream />
+            </div>
+
+            <div className="dashboard-insights">
+              <InsightTray />
             </div>
 
             {/* Bottom: Split View */}

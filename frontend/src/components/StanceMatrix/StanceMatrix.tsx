@@ -44,7 +44,7 @@ function StanceCell({
 }
 
 export function StanceMatrix() {
-  const { run, activeStage, selectAgent, selectedAgentId } =
+  const { run, activeStage, selectAgent, selectedAgentId, pinInsight } =
     useSimulationStore();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [tooltip, setTooltip] = useState<TooltipState>({
@@ -104,14 +104,30 @@ export function StanceMatrix() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.08, ease: "easeOut" }}
             >
-              <button
-                className="group-header"
-                onClick={() => toggleGroup(group.group_id)}
-              >
-                <span className="group-chevron">{isCollapsed ? "▶" : "▼"}</span>
-                <span className="group-name">{group.name}</span>
-                <span className="group-incentive">{group.primary_incentive}</span>
-              </button>
+              <div className="group-header-row">
+                <button
+                  className="group-header"
+                  onClick={() => toggleGroup(group.group_id)}
+                >
+                  <span className="group-chevron">{isCollapsed ? "▶" : "▼"}</span>
+                  <span className="group-name">{group.name}</span>
+                  <span className="group-incentive">{group.primary_incentive}</span>
+                </button>
+                <button
+                  type="button"
+                  className="matrix-pin-btn"
+                  onClick={() => {
+                    pinInsight({
+                      type: "group",
+                      stage: activeStage,
+                      title: `${group.name} (${activeStage})`,
+                      detail: `Primary incentive: ${group.primary_incentive}. Members in matrix: ${groupAgents.length}.`,
+                    });
+                  }}
+                >
+                  📌
+                </button>
+              </div>
 
               {!isCollapsed && (
                 <div className="agent-list">
@@ -128,6 +144,23 @@ export function StanceMatrix() {
                       >
                         <span className="agent-persona">{agent.persona}</span>
                         <StanceCell result={result} onHover={handleHover} />
+                        {result && (
+                          <button
+                            type="button"
+                            className="matrix-pin-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              pinInsight({
+                                type: "agent",
+                                stage: activeStage,
+                                title: `${agent.persona.slice(0, 42)}${agent.persona.length > 42 ? "…" : ""}`,
+                                detail: `${result.stance}: ${result.reasoning}`,
+                              });
+                            }}
+                          >
+                            📌
+                          </button>
+                        )}
                       </div>
                     );
                   })}
