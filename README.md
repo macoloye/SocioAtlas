@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./docs/readme-banner.svg" alt="SocioAtlas banner showing an event flowing into a knowledge graph, coalition formation, and stage-based analysis." width="100%" />
+</p>
+
 # SocioAtlas
 
 SocioAtlas is an AI-powered social simulation workspace for testing how personas, groups, and coalitions react to an event over time. Describe a policy, product launch, crisis, or narrative shift, then inspect how incentives, alliances, and conflicts evolve from initial reaction through stabilization.

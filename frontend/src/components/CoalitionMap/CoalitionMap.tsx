@@ -207,8 +207,8 @@ export function CoalitionMap() {
 
     const columns = Math.min(3, Math.max(1, Math.ceil(Math.sqrt(sortedGroups.length))));
     const rows = Math.max(1, Math.ceil(sortedGroups.length / columns));
-    const spacingX = 18;
-    const spacingY = 14;
+    const spacingX = 24;
+    const spacingY = 18;
     const positionedNodes: PositionedRenderNode[] = [];
     const clustersOut: GroupCluster[] = [];
 
@@ -234,7 +234,7 @@ export function CoalitionMap() {
         const renderedAgent = renderedNodeById.get(agentId);
         if (!renderedAgent) return;
         const angle = (memberIndex / Math.max(members.length, 1)) * Math.PI * 2;
-        const orbitRadius = 4.6 + Math.min(4.4, members.length * 0.24);
+        const orbitRadius = 6.8 + Math.min(6.2, members.length * 0.3);
         const labelEvery = members.length > 8 ? 4 : members.length > 4 ? 2 : 1;
         const positionedAgent: PositionedRenderNode = {
           ...renderedAgent,
@@ -318,6 +318,16 @@ export function CoalitionMap() {
     <div className="coalition-map">
       <div className="coalition-layout">
         <div className="coalition-canvas-area">
+          <div className="coalition-hud coalition-hud-top">
+            <div>
+              <span className="coalition-hud-label">Knowledge graph</span>
+              <strong>Coalition topology</strong>
+            </div>
+            <div className="coalition-hud-metrics">
+              <span>{clusters.length} groups</span>
+            </div>
+          </div>
+
           <div className="coalition-toolbar coalition-toolbar-overlay">
             <button
               type="button"
@@ -390,19 +400,7 @@ export function CoalitionMap() {
               resetToken={resetToken}
             />
           )}
-        </div>
-
-        <aside className="coalition-sidebar">
-          <div className="coalition-sidebar-header">
-            <span>Knowledge graph</span>
-            <span className="coalition-stage-chip">{activeStage}</span>
-          </div>
-          <div className="coalition-sidebar-body">
-            <div className="coalition-meta-row">
-              <span>{clusters.length} groups</span>
-              <span>{totalAgents} agents</span>
-            </div>
-
+          <aside className="coalition-detail-float">
             {!selectedNode ? (
               <div className="coalition-hint">
                 Click any node to inspect it. Drag to pan. Scroll to zoom.
@@ -460,28 +458,40 @@ export function CoalitionMap() {
                       </div>
                       <div className="detail-row">
                         <span className="detail-label">Stance</span>
-                        <span className="detail-value" style={{ color: stanceColor(selectedNode.score, selectedNode.contested) }}>
+                        <span
+                          className="detail-value"
+                          style={{ color: stanceColor(selectedNode.score, selectedNode.contested) }}
+                        >
                           {selectedNode.contested ? "Contested" : stanceLabel(selectedNode.score)}
                         </span>
                       </div>
                       {selectedNode.contested && (
                         <div className="detail-row">
                           <span className="detail-label">Contested</span>
-                          <span className="detail-value" style={{ color: "#a855f7" }}>Internally split</span>
+                          <span className="detail-value" style={{ color: "#a855f7" }}>
+                            Internally split
+                          </span>
                         </div>
                       )}
                       {selectedNode.intensity !== undefined && (
                         <div className="detail-row">
                           <span className="detail-label">Intensity</span>
                           <span className="detail-value">
-                            {selectedNode.intensity === 1 ? "Low (background)" : selectedNode.intensity === 3 ? "High (loud)" : "Medium"}
+                            {selectedNode.intensity === 1
+                              ? "Low (background)"
+                              : selectedNode.intensity === 3
+                                ? "High (loud)"
+                                : "Medium"}
                           </span>
                         </div>
                       )}
                       <div className="stance-bar">
                         <div
                           className="stance-fill"
-                          style={{ width: `${stancePercent}%`, background: stanceColor(selectedNode.score, selectedNode.contested) }}
+                          style={{
+                            width: `${stancePercent}%`,
+                            background: stanceColor(selectedNode.score, selectedNode.contested),
+                          }}
                         />
                       </div>
                       {selectedNode.reasoning && (
@@ -525,8 +535,8 @@ export function CoalitionMap() {
                 </div>
               </div>
             )}
-          </div>
-        </aside>
+          </aside>
+        </div>
       </div>
     </div>
   );

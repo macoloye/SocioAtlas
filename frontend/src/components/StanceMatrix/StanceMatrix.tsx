@@ -47,12 +47,14 @@ export function StanceMatrix() {
   const { run, activeStage, selectAgent, selectedAgentId, pinInsight } =
     useSimulationStore();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [tooltip, setTooltip] = useState<TooltipState>({
     visible: false,
     text: "",
     x: 0,
     y: 0,
   });
+  const PREVIEW_AGENT_COUNT = 3;
 
   if (!run) return null;
 
@@ -86,6 +88,9 @@ export function StanceMatrix() {
   const toggleGroup = (groupId: string) =>
     setCollapsed((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
 
+  const showAllAgents = (groupId: string) =>
+    setExpandedGroups((prev) => ({ ...prev, [groupId]: true }));
+
   return (
     <div className="stance-matrix">
       {/* Stage label — stage is now controlled globally from the timeline strip */}
@@ -96,6 +101,11 @@ export function StanceMatrix() {
         {groups.map((group: Group, idx: number) => {
           const isCollapsed = collapsed[group.group_id];
           const groupAgents = agentsByGroup.get(group.group_id) ?? [];
+          const isExpanded = expandedGroups[group.group_id] === true;
+          const visibleAgents = isExpanded
+            ? groupAgents
+            : groupAgents.slice(0, PREVIEW_AGENT_COUNT);
+          const hiddenAgentCount = Math.max(0, groupAgents.length - visibleAgents.length);
           return (
             <motion.div
               key={group.group_id}
@@ -131,7 +141,7 @@ export function StanceMatrix() {
 
               {!isCollapsed && (
                 <div className="agent-list">
-                  {groupAgents.map((agent) => {
+                  {visibleAgents.map((agent) => {
                     const result = resultByAgent.get(agent.id);
                     const isSelected = selectedAgentId === agent.id;
                     return (
@@ -164,6 +174,16 @@ export function StanceMatrix() {
                       </div>
                     );
                   })}
+                  {hiddenAgentCount > 0 && (
+                    <button
+                      type="button"
+                      className="matrix-load-more-btn"
+                      onClick={() => showAllAgents(group.group_id)}
+                    >
+                      <span className="matrix-load-more-ellipsis">...</span>
+                      <span>Load {hiddenAgentCount} more agents</span>
+                    </button>
+                  )}
                 </div>
               )}
             </motion.div>

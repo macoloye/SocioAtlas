@@ -41,10 +41,10 @@ function pairKey(source: string, target: string) {
 }
 
 function edgeStroke(edgeType: GraphEdge["edge_type"]) {
-  if (edgeType === "MEMBER_OF") return "#8b9db6";
-  if (edgeType === "ALIGNS_WITH" || edgeType === "COOPERATES_WITH") return "#4ade80";
-  if (edgeType === "CONFLICTS_WITH" || edgeType === "COMPETES_WITH") return "#f87171";
-  return "#9ca3af";
+  if (edgeType === "MEMBER_OF") return "#aab4c7";
+  if (edgeType === "ALIGNS_WITH" || edgeType === "COOPERATES_WITH") return "#6cbf9b";
+  if (edgeType === "CONFLICTS_WITH" || edgeType === "COMPETES_WITH") return "#ef8d62";
+  return "#b7bfcd";
 }
 
 export function CoalitionGraphD3(props: CoalitionGraphD3Props) {
@@ -66,12 +66,12 @@ export function CoalitionGraphD3(props: CoalitionGraphD3Props) {
     const cy = height / 2;
     const projectX = (node: VisualNode, index: number) =>
       node.x !== undefined
-        ? cx + node.x * 24
-        : Math.cos((index / Math.max(nodes.length, 1)) * Math.PI * 2) * 140 + cx;
+        ? cx + node.x * 40
+        : Math.cos((index / Math.max(nodes.length, 1)) * Math.PI * 2) * 220 + cx;
     const projectY = (node: VisualNode, index: number) =>
       node.y !== undefined
-        ? cy + node.y * 22
-        : Math.sin((index / Math.max(nodes.length, 1)) * Math.PI * 2) * 120 + cy;
+        ? cy + node.y * 34
+        : Math.sin((index / Math.max(nodes.length, 1)) * Math.PI * 2) * 180 + cy;
 
     const graphNodes: GraphNodeDatum[] = nodes.map((node, index) => ({
       ...node,
@@ -128,12 +128,12 @@ export function CoalitionGraphD3(props: CoalitionGraphD3Props) {
           .forceLink<GraphNodeDatum, GraphLinkDatum>(graphEdges as GraphLinkDatum[])
           .id((node: GraphNodeDatum) => node.id)
           .distance((edge: GraphLinkDatum) => {
-            const base = edge.width > 1.2 ? 118 : 98;
+            const base = edge.width > 1.2 ? 146 : 118;
             return base + (edge.pairTotal - 1) * 18;
           })
           .strength((edge: GraphLinkDatum) => (edge.width > 1.2 ? 0.08 : 0.05)),
       )
-      .force("charge", d3.forceManyBody<GraphNodeDatum>().strength(-690))
+      .force("charge", d3.forceManyBody<GraphNodeDatum>().strength(-940))
       .force(
         "collide",
         d3
@@ -174,8 +174,8 @@ export function CoalitionGraphD3(props: CoalitionGraphD3Props) {
         node.node_type === "group" ? "d3-node d3-node-group" : "d3-node d3-node-agent",
       )
       .attr("r", (node: GraphNodeDatum) => Math.max(6, node.size * 0.9))
-      .attr("fill", (node: GraphNodeDatum) => (selectedNodeId === node.id ? "#facc15" : node.color))
-      .attr("stroke", (node: GraphNodeDatum) => (selectedNodeId === node.id ? "#fde68a" : "#e2e8f0"))
+      .attr("fill", (node: GraphNodeDatum) => (selectedNodeId === node.id ? "#ff8b4a" : node.color))
+      .attr("stroke", (node: GraphNodeDatum) => (selectedNodeId === node.id ? "#fff3ea" : "rgba(255, 255, 255, 0.9)"))
       .attr("stroke-width", (node: GraphNodeDatum) => (selectedNodeId === node.id ? 3 : 1.8))
       .attr("opacity", 0)
       .style("cursor", "pointer")
@@ -231,10 +231,10 @@ export function CoalitionGraphD3(props: CoalitionGraphD3Props) {
       })
       .attr("font-size", (node: GraphNodeDatum) => (node.node_type === "group" ? 12 : 11))
       .attr("font-weight", (node: GraphNodeDatum) => (node.node_type === "group" ? 700 : 500))
-      .attr("fill", (node: GraphNodeDatum) => (node.node_type === "group" ? "#1f2937" : "#334155"))
+      .attr("fill", (node: GraphNodeDatum) => (node.node_type === "group" ? "#202533" : "#6b7284"))
       .style("paint-order", "stroke")
-      .style("stroke", "rgba(255,255,255,0.9)")
-      .style("stroke-width", "2px")
+      .style("stroke", "rgba(255,255,255,0.96)")
+      .style("stroke-width", "2.4px")
       .style("display", "none")
       .style("pointer-events", "none");
 
@@ -361,10 +361,10 @@ export function CoalitionGraphD3(props: CoalitionGraphD3Props) {
       const maxY = Math.max(...ys);
       const graphWidth = Math.max(1, maxX - minX);
       const graphHeight = Math.max(1, maxY - minY);
-      const padding = 70;
+      const padding = 110;
       const scale = Math.max(
         0.2,
-        Math.min(1.8, Math.min((width - padding) / graphWidth, (height - padding) / graphHeight)),
+        Math.min(2.5, Math.min((width - padding) / graphWidth, (height - padding) / graphHeight)),
       );
       const tx = width / 2 - ((minX + maxX) / 2) * scale;
       const ty = height / 2 - ((minY + maxY) / 2) * scale;

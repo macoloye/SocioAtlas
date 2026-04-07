@@ -115,7 +115,7 @@ function computeStageDelta(stage: Stage, runTimeline: Partial<Record<Stage, Stag
   };
 }
 
-function EndStatePicker({
+export function EndStatePicker({
   stage,
   progress,
 }: {
@@ -268,11 +268,13 @@ function DoneCard({
   output,
   progress,
   delta,
+  showCurrentEvent,
 }: {
   stage: Stage;
   output: StageOutput;
   progress?: StageProgress;
   delta: StageDelta | null;
+  showCurrentEvent: boolean;
 }) {
   const sup = output.results.filter((r) => r.score > 0).length;
   const opp = output.results.filter((r) => r.score < 0).length;
@@ -293,7 +295,7 @@ function DoneCard({
         </div>
       </div>
 
-      {currentEvent && (
+      {showCurrentEvent && currentEvent && (
         <div className="carousel-current-event">
           <span className="carousel-event-label">Current event</span>
           <p className="carousel-event-text">{currentEvent}</p>
@@ -340,7 +342,15 @@ function DoneCard({
   );
 }
 
-function LiveCard({ stage, progress }: { stage: Stage; progress: StageProgress }) {
+function LiveCard({
+  stage,
+  progress,
+  showCurrentEvent,
+}: {
+  stage: Stage;
+  progress: StageProgress;
+  showCurrentEvent: boolean;
+}) {
   const { groups, results, current_event, transitionStep, transitionMessage } = progress;
   const activeStep = transitionStep ?? "groups";
   const activeStepIndex = activeStep === "groups" ? 0 : activeStep === "stances" ? 1 : 2;
@@ -381,7 +391,7 @@ function LiveCard({ stage, progress }: { stage: Stage; progress: StageProgress }
         </div>
       </div>
 
-      {current_event && (
+      {showCurrentEvent && current_event && (
         <div className="carousel-current-event">
           <span className="carousel-event-label">Current event</span>
           <p className="carousel-event-text">{current_event}</p>
@@ -460,7 +470,13 @@ function PeekCard({
   );
 }
 
-export function StageStream() {
+export function StageStream({
+  showTitle = true,
+  showCurrentEvent = true,
+}: {
+  showTitle?: boolean;
+  showCurrentEvent?: boolean;
+}) {
   const { run, stageProgress, activeStage, setStage, isLoading } = useSimulationStore();
   const [direction, setDirection] = useState(0);
   const [nowMs, setNowMs] = useState(Date.now());
@@ -485,8 +501,18 @@ export function StageStream() {
     const progress = stageProgress[stage];
     const delta = computeStageDelta(stage, run.timeline);
 
-    if (output) return <DoneCard stage={stage} output={output} progress={progress} delta={delta} />;
-    if (progress) return <LiveCard stage={stage} progress={progress} />;
+    if (output) {
+      return (
+        <DoneCard
+          stage={stage}
+          output={output}
+          progress={progress}
+          delta={delta}
+          showCurrentEvent={showCurrentEvent}
+        />
+      );
+    }
+    if (progress) return <LiveCard stage={stage} progress={progress} showCurrentEvent={showCurrentEvent} />;
     if (isLoading) return <PendingCard stage={stage} />;
     return null;
   };
@@ -501,7 +527,7 @@ export function StageStream() {
 
   return (
     <div className="stage-stream">
-      <div className="stage-stream-title">Timeline Stages</div>
+      {showTitle && <div className="stage-stream-title">Timeline Stages</div>}
 
       <div className="stage-status-rail">
         {STAGE_LIST.map((stage, idx) => {
