@@ -13,9 +13,9 @@ import { motion, AnimatePresence } from "framer-motion";
 type RightPanelTab = "matrix" | "drift" | "incentive" | "chat";
 
 const RIGHT_TABS: { id: RightPanelTab; label: string }[] = [
-  { id: "matrix", label: "Stance Matrix" },
-  { id: "drift", label: "Timeline Drift" },
-  { id: "incentive", label: "Incentive Breakdown" },
+  { id: "matrix", label: "Matrix" },
+  { id: "drift", label: "Drift" },
+  { id: "incentive", label: "Incentives" },
   { id: "chat", label: "Graph Chat" },
 ];
 
@@ -31,137 +31,112 @@ export default function App() {
     historyRefreshToken,
     loadHistory,
     loadRun,
+    activeStage,
   } = useSimulationStore();
-  // Default to matrix tab so user sees stance matrix by default on the right
-  const [activeRightTab, setActiveRightTab] = useState<RightPanelTab>("matrix");
+
+  const [activeRightTab, setActiveRightTab] = useState<RightPanelTab>("chat");
   const [selectedHistoryRunId, setSelectedHistoryRunId] = useState<string>("");
 
-  const stageCount = run ? Object.keys(run.timeline).length : 0;
-  const TOTAL_STAGES = 5;
+  const completedStages = run ? Object.keys(run.timeline).length : 0;
 
   useEffect(() => {
     loadHistory();
   }, [loadHistory]);
 
   useEffect(() => {
-    if (historyRefreshToken > 0) {
-      loadHistory();
-    }
+    if (historyRefreshToken > 0) loadHistory();
   }, [historyRefreshToken, loadHistory]);
 
   return (
-    <div className="app dashboard-layout">
-      {/* Header */}
-      <header className="app-header">
-        <div className="app-title-row">
-          <div className="app-title-group">
-            <h1 className="app-title">SocioAtlas</h1>
-            {run && (
-              <button className="reset-btn" onClick={reset}>
-                New simulation
-              </button>
-            )}
-          </div>
-          <div className="history-controls">
-            <label className="history-label" htmlFor="history-select">
-              Previous simulations
-            </label>
-            <div className="history-row">
-              <select
-                id="history-select"
-                className="history-select"
-                value={selectedHistoryRunId}
-                onChange={(e) => setSelectedHistoryRunId(e.target.value)}
-                disabled={historyLoading || history.length === 0}
-              >
-                <option value="">
-                  {historyLoading
-                    ? "Loading..."
-                    : history.length
-                    ? "Select a simulation"
-                    : "No saved runs yet"}
-                </option>
-                {history.map((item) => {
-                  const truncatedEvent =
-                    item.initial_event.length > 10
-                      ? `${item.initial_event.slice(0, 10)}…`
-                      : item.initial_event;
-                  return (
-                    <option key={item.run_id} value={item.run_id} title={item.initial_event}>
-                      {new Date(item.created_at).toLocaleString()} - {truncatedEvent}
-                    </option>
-                  );
-                })}
-              </select>
-              <button
-                className="history-load-btn"
-                disabled={!selectedHistoryRunId}
-                onClick={() => void loadRun(selectedHistoryRunId)}
-              >
-                Load
-              </button>
-            </div>
-            {historyError && <p className="history-error">{historyError}</p>}
-          </div>
+    <div className="app neo-shell">
+      <header className="neo-header">
+        <div className="neo-brand">
+          <h1>SocioAtlas // Graph Ops</h1>
+          <p>Minimal signal interface for coalition intelligence.</p>
         </div>
-        <p className="app-subtitle">
-          Enter any event and watch how real personas react across society over time.
-        </p>
+
+        <div className="neo-history">
+          <label htmlFor="history-select">Load run</label>
+          <div className="neo-history-row">
+            <select
+              id="history-select"
+              className="history-select"
+              value={selectedHistoryRunId}
+              onChange={(e) => setSelectedHistoryRunId(e.target.value)}
+              disabled={historyLoading || history.length === 0}
+            >
+              <option value="">
+                {historyLoading
+                  ? "Loading..."
+                  : history.length
+                    ? "Select a simulation"
+                    : "No saved runs"}
+              </option>
+              {history.map((item) => (
+                <option key={item.run_id} value={item.run_id} title={item.initial_event}>
+                  {new Date(item.created_at).toLocaleString()} · {item.initial_event.slice(0, 24)}
+                </option>
+              ))}
+            </select>
+            <button
+              className="history-load-btn"
+              disabled={!selectedHistoryRunId}
+              onClick={() => void loadRun(selectedHistoryRunId)}
+            >
+              Load
+            </button>
+          </div>
+          {historyError && <p className="history-error">{historyError}</p>}
+        </div>
       </header>
 
-      {/* Event input */}
-      <div className="input-section">
+      <section className="neo-command-bar">
         <EventInput />
-      </div>
+      </section>
 
-      {/* Streaming progress banner (compact — shows while loading but run exists) */}
       <AnimatePresence>
         {isLoading && (
           <motion.div
-            className="loading-state"
-            style={{ padding: "1rem 1.5rem", flexDirection: "row", gap: "0.75rem", justifyContent: "flex-start" }}
+            className="neo-loading"
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
           >
-            <div className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }} />
-            <p style={{ fontSize: "0.88rem" }}>
+            <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
+            <span>
               {run
-                ? `Streaming… ${stageCount} / ${TOTAL_STAGES} stages complete`
-                : "Initializing simulation…"}
-            </p>
+                ? `Streaming graph state · ${completedStages}/5 stages complete`
+                : "Initializing graph simulation..."}
+            </span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Error state */}
       {error && !isLoading && (
         <div className="error-state">
           <p className="error-message">{error}</p>
-          <button className="reset-btn" onClick={reset}>
-            Try again
-          </button>
+          <button className="reset-btn" onClick={reset}>Retry</button>
         </div>
       )}
 
-      {/* Results Dashboard — shown as soon as first stage arrives */}
       <AnimatePresence>
         {run && (
-          <motion.div
-            className="results-dashboard"
+          <motion.main
+            className="neo-dashboard"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
           >
-            {/* Event label */}
-            <div className="event-label">
-              <span className="event-label-prefix">Event:</span>
-              <span className="event-label-text">{run.initial_event}</span>
-            </div>
-
-            {/* Top: Stage Stream */}
-            <div className="dashboard-top">
-                <StageStream />
+            <div className="neo-topline">
+              <div>
+                <span className="neo-kicker">Current Event</span>
+                <p>{run.initial_event}</p>
+              </div>
+              <div className="neo-metrics">
+                <div><span>Active Stage</span><strong>{activeStage}</strong></div>
+                <div><span>Stages done</span><strong>{completedStages}/5</strong></div>
+                <div><span>Agents</span><strong>{run.agents.length}</strong></div>
+              </div>
             </div>
 
             <div className="dashboard-insights">
@@ -175,9 +150,13 @@ export default function App() {
                 <CoalitionMap />
               </div>
 
-              {/* Right: Tabbed Details */}
-              <div className="dashboard-right">
-                <div className="dashboard-tabs">
+              <aside className="neo-right-rail panel-glass">
+                <div className="panel-head">
+                  <h2>Stage Intelligence</h2>
+                </div>
+                <StageStream />
+
+                <div className="neo-tabs">
                   {RIGHT_TABS.map((tab) => (
                     <button
                       key={tab.id}
@@ -188,32 +167,32 @@ export default function App() {
                     </button>
                   ))}
                 </div>
-                <div className="dashboard-content">
+                <div className="neo-tab-content">
                   {activeRightTab === "matrix" && <StanceMatrix />}
                   {activeRightTab === "drift" && <TimelineDrift />}
                   {activeRightTab === "incentive" && <IncentiveBreakdown />}
                   {activeRightTab === "chat" && <GraphChat />}
                 </div>
+              </aside>
+            </section>
+
+            <section className="neo-bottom-grid">
+              <div className="panel-glass">
+                <div className="panel-head">
+                  <h2>Pinned Insights</h2>
+                </div>
+                <InsightTray />
               </div>
-            </div>
-          </motion.div>
+            </section>
+          </motion.main>
         )}
       </AnimatePresence>
 
-      {/* Empty state */}
       <AnimatePresence>
         {!run && !isLoading && !error && (
-          <motion.div
-            className="empty-state"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <p>Type an event above to begin the simulation.</p>
-            <p className="empty-hint">
-              Personas are sampled from a pool of 78,000+ real character descriptions
-              and scored by an LLM at each of the 5 timeline stages.
-            </p>
+          <motion.div className="empty-state" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <p>Define an event to initialize the graph-driven dashboard.</p>
+            <p className="empty-hint">SocioAtlas now prioritizes the coalition knowledge graph as the primary command surface.</p>
           </motion.div>
         )}
       </AnimatePresence>
