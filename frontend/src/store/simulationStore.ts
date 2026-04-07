@@ -19,6 +19,8 @@ import {
 
 // Partial progress within a single stage (updates as each LLM call completes)
 export interface StageProgress {
+  started_at_ms?: number;
+  completed_at_ms?: number;
   status:
     | "starting"
     | "transition"
@@ -34,6 +36,15 @@ export interface StageProgress {
   end_state?: StageEndState;
   end_state_options?: EventStateOption[];
   timeout_seconds?: number;
+}
+
+export interface PinnedInsight {
+  id: string;
+  type: "stage_delta" | "group" | "agent" | "custom";
+  title: string;
+  detail: string;
+  stage: Stage | null;
+  created_at_ms: number;
 }
 
 interface SimulationState {
@@ -52,6 +63,7 @@ interface SimulationState {
   chatAnswer: string;
   chatEvidence: GraphEvidence[];
   selectingEndStateStage: Stage | null;
+  pinnedInsights: PinnedInsight[];
 
   submitEvent: (event: string, sampleSize?: number) => Promise<void>;
   selectEndState: (
@@ -66,6 +78,9 @@ interface SimulationState {
   clearChat: () => void;
   setStage: (stage: Stage) => void;
   selectAgent: (agentId: string | null) => void;
+  pinInsight: (insight: Omit<PinnedInsight, "id" | "created_at_ms">) => void;
+  removePinnedInsight: (id: string) => void;
+  clearPinnedInsights: () => void;
   reset: () => void;
 }
 
@@ -105,6 +120,7 @@ export const useSimulationStore = create<SimulationState>((set) => ({
   chatAnswer: "",
   chatEvidence: [],
   selectingEndStateStage: null,
+  pinnedInsights: [],
 
   submitEvent: async (event: string, sampleSize?: number) => {
     set({
@@ -114,6 +130,7 @@ export const useSimulationStore = create<SimulationState>((set) => ({
       run: null,
       stageProgress: {},
       selectingEndStateStage: null,
+      pinnedInsights: [],
     });
 
     try {
@@ -131,6 +148,7 @@ export const useSimulationStore = create<SimulationState>((set) => ({
                 transitionStep: "groups",
                 transitionMessage: "Starting stage",
                 current_event: chunk.current_event,
+                started_at_ms: Date.now(),
               },
             },
             activeStage: stage as Stage,
@@ -236,6 +254,7 @@ export const useSimulationStore = create<SimulationState>((set) => ({
                   transitionMessage: "Stage complete",
                   end_state: chunk.end_state,
                   end_state_options: chunk.end_state?.event_state_options ?? [],
+                  completed_at_ms: Date.now(),
                 },
               },
             };
@@ -327,6 +346,7 @@ export const useSimulationStore = create<SimulationState>((set) => ({
         chatAnswer: "",
         chatEvidence: [],
         selectingEndStateStage: null,
+        pinnedInsights: [],
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load simulation";
@@ -366,6 +386,25 @@ export const useSimulationStore = create<SimulationState>((set) => ({
   setStage: (stage) => set({ activeStage: stage }),
   selectAgent: (agentId) => set({ selectedAgentId: agentId }),
 
+  pinInsight: (insight) =>
+    set((state) => ({
+      pinnedInsights: [
+        {
+          ...insight,
+          id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+          created_at_ms: Date.now(),
+        },
+        ...state.pinnedInsights,
+      ],
+    })),
+
+  removePinnedInsight: (id) =>
+    set((state) => ({
+      pinnedInsights: state.pinnedInsights.filter((item) => item.id !== id),
+    })),
+
+  clearPinnedInsights: () => set({ pinnedInsights: [] }),
+
   reset: () =>
     set({
       run: null,
@@ -378,5 +417,6 @@ export const useSimulationStore = create<SimulationState>((set) => ({
       chatAnswer: "",
       chatEvidence: [],
       selectingEndStateStage: null,
+      pinnedInsights: [],
     }),
 }));

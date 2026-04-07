@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { Stage, StageOutput } from "@socioatlas/shared";
+import type { Group, Stage, StageOutput, StanceResult } from "@socioatlas/shared";
 import { useSimulationStore, type StageProgress } from "../../store/simulationStore";
 
 const STAGE_LIST: Stage[] = ["T1", "T2", "T3", "T4", "T5"];
@@ -11,6 +11,15 @@ const POSTURE_COLOR: Record<string, string> = {
   ambiguous: "var(--yellow)",
   neutral: "var(--text-muted)",
 };
+
+type StageRailStatus = "queued" | "running" | "waiting" | "complete";
+
+interface StageDelta {
+  supportDelta: number;
+  opposeDelta: number;
+  groupCountDelta: number;
+  mostShiftedGroupLabel: string;
+}
 
 function Pulse() {
   return (
@@ -27,6 +36,83 @@ function Pulse() {
       transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
     />
   );
+}
+
+function formatElapsed(ms?: number) {
+  if (!ms || Number.isNaN(ms)) return "--";
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
+function resolveRailStatus(output: StageOutput | undefined, progress: StageProgress | undefined): StageRailStatus {
+  if (output) return "complete";
+  if (!progress) return "queued";
+  if (progress.status === "awaiting_choice") return "waiting";
+  return "running";
+}
+
+function summarizeGroupShift(current: StageOutput, previous?: StageOutput) {
+  if (!previous) return "No previous stage baseline.";
+
+  const averageScoreByGroup = (results: StanceResult[], groups: Group[]) => {
+    const sums = new Map<string, { sum: number; count: number }>();
+    for (const result of results) {
+      const existing = sums.get(result.assigned_group_id) ?? { sum: 0, count: 0 };
+      sums.set(result.assigned_group_id, { sum: existing.sum + result.score, count: existing.count + 1 });
+    }
+    const names = new Map(groups.map((group) => [group.group_id, group.name]));
+    return Array.from(sums.entries()).map(([groupId, value]) => ({
+      groupId,
+      name: names.get(groupId) ?? groupId,
+      avg: value.count ? value.sum / value.count : 0,
+    }));
+  };
+
+  const currentAvg = averageScoreByGroup(current.results, current.groups);
+  const previousAvg = averageScoreByGroup(previous.results, previous.groups);
+  const previousById = new Map(previousAvg.map((entry) => [entry.groupId, entry]));
+
+  let topLabel = "n/a";
+  let topShift = 0;
+  for (const entry of currentAvg) {
+    const prevAvg = previousById.get(entry.groupId)?.avg ?? 0;
+    const shift = Math.abs(entry.avg - prevAvg);
+    if (shift > topShift) {
+      topShift = shift;
+      topLabel = entry.name;
+    }
+  }
+
+  return `${topLabel} (${topShift.toFixed(2)} avg stance shift)`;
+}
+
+function computeStageDelta(stage: Stage, runTimeline: Partial<Record<Stage, StageOutput>>): StageDelta | null {
+  const index = STAGE_LIST.indexOf(stage);
+  const current = runTimeline[stage];
+  if (!current) return null;
+
+  const currentSupport = current.results.filter((result) => result.score > 0).length;
+  const currentOppose = current.results.filter((result) => result.score < 0).length;
+
+  if (index <= 0) {
+    return {
+      supportDelta: currentSupport,
+      opposeDelta: currentOppose,
+      groupCountDelta: current.groups.length,
+      mostShiftedGroupLabel: "Baseline stage",
+    };
+  }
+
+  const previous = runTimeline[STAGE_LIST[index - 1]];
+  if (!previous) return null;
+  const previousSupport = previous.results.filter((result) => result.score > 0).length;
+  const previousOppose = previous.results.filter((result) => result.score < 0).length;
+
+  return {
+    supportDelta: currentSupport - previousSupport,
+    opposeDelta: currentOppose - previousOppose,
+    groupCountDelta: current.groups.length - previous.groups.length,
+    mostShiftedGroupLabel: summarizeGroupShift(current, previous),
+  };
 }
 
 function EndStatePicker({
@@ -141,14 +227,52 @@ function EndStatePicker({
   );
 }
 
+function DeltaCard({ stage, delta }: { stage: Stage; delta: StageDelta | null }) {
+  const { pinInsight } = useSimulationStore();
+
+  if (!delta) return null;
+
+  const detail = `Support ${delta.supportDelta >= 0 ? "+" : ""}${delta.supportDelta}, Oppose ${delta.opposeDelta >= 0 ? "+" : ""}${delta.opposeDelta}, Groups ${delta.groupCountDelta >= 0 ? "+" : ""}${delta.groupCountDelta}. Most shifted: ${delta.mostShiftedGroupLabel}.`;
+
+  return (
+    <div className="stage-delta-card">
+      <div className="stage-delta-head">
+        <span>What changed vs previous stage?</span>
+        <button
+          type="button"
+          className="pin-insight-btn"
+          onClick={() =>
+            pinInsight({
+              type: "stage_delta",
+              stage,
+              title: `${stage} delta summary`,
+              detail,
+            })
+          }
+        >
+          Pin insight
+        </button>
+      </div>
+      <div className="stage-delta-grid">
+        <span>Support: {delta.supportDelta >= 0 ? "+" : ""}{delta.supportDelta}</span>
+        <span>Oppose: {delta.opposeDelta >= 0 ? "+" : ""}{delta.opposeDelta}</span>
+        <span>Groups: {delta.groupCountDelta >= 0 ? "+" : ""}{delta.groupCountDelta}</span>
+      </div>
+      <p>{delta.mostShiftedGroupLabel}</p>
+    </div>
+  );
+}
+
 function DoneCard({
   stage,
   output,
   progress,
+  delta,
 }: {
   stage: Stage;
   output: StageOutput;
   progress?: StageProgress;
+  delta: StageDelta | null;
 }) {
   const sup = output.results.filter((r) => r.score > 0).length;
   const opp = output.results.filter((r) => r.score < 0).length;
@@ -177,6 +301,8 @@ function DoneCard({
       )}
 
       <div className="carousel-card-body">
+        <DeltaCard stage={stage} delta={delta} />
+
         <div className="stage-card-section-title">Groups</div>
         <div className="stage-card-groups">
           {output.groups.map((g) => (
@@ -337,6 +463,12 @@ function PeekCard({
 export function StageStream() {
   const { run, stageProgress, activeStage, setStage, isLoading } = useSimulationStore();
   const [direction, setDirection] = useState(0);
+  const [nowMs, setNowMs] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowMs(Date.now()), 200);
+    return () => window.clearInterval(timer);
+  }, []);
 
   if (!run) return null;
 
@@ -351,8 +483,9 @@ export function StageStream() {
   const renderCardContent = (stage: Stage) => {
     const output = run.timeline[stage];
     const progress = stageProgress[stage];
+    const delta = computeStageDelta(stage, run.timeline);
 
-    if (output) return <DoneCard stage={stage} output={output} progress={progress} />;
+    if (output) return <DoneCard stage={stage} output={output} progress={progress} delta={delta} />;
     if (progress) return <LiveCard stage={stage} progress={progress} />;
     if (isLoading) return <PendingCard stage={stage} />;
     return null;
@@ -369,6 +502,34 @@ export function StageStream() {
   return (
     <div className="stage-stream">
       <div className="stage-stream-title">Timeline Stages</div>
+
+      <div className="stage-status-rail">
+        {STAGE_LIST.map((stage, idx) => {
+          const output = run.timeline[stage];
+          const progress = stageProgress[stage];
+          const status = resolveRailStatus(output, progress);
+          const elapsedMs = output
+            ? (progress?.completed_at_ms ?? nowMs) - (progress?.started_at_ms ?? nowMs)
+            : progress?.started_at_ms
+              ? nowMs - progress.started_at_ms
+              : undefined;
+
+          return (
+            <button
+              key={stage}
+              type="button"
+              className={`stage-rail-item ${status} ${activeStage === stage ? "active" : ""}`}
+              onClick={() => navigate(idx)}
+            >
+              <span className="stage-rail-top">
+                <strong>{stage}</strong>
+                <span>{status}</span>
+              </span>
+              <span className="stage-rail-time">{formatElapsed(elapsedMs)}</span>
+            </button>
+          );
+        })}
+      </div>
 
       <div className="stage-carousel-wrap">
         {prevStage && <PeekCard stage={prevStage} side="left" onClick={() => navigate(activeIndex - 1)} />}

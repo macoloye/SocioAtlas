@@ -5,6 +5,12 @@ const MIN_SAMPLE_SIZE = 5;
 const MAX_SAMPLE_SIZE = 200;
 const DEFAULT_SAMPLE_SIZE = 30;
 
+function estimateRuntimeSeconds(sampleSize: number) {
+  const low = Math.max(8, Math.round(sampleSize * 0.75));
+  const high = Math.max(low + 4, Math.round(sampleSize * 1.3));
+  return { low, high };
+}
+
 export function EventInput() {
   const [value, setValue] = useState("");
   const [sampleSize, setSampleSize] = useState(DEFAULT_SAMPLE_SIZE);
@@ -19,6 +25,7 @@ export function EventInput() {
 
   const fillPct =
     ((sampleSize - MIN_SAMPLE_SIZE) / (MAX_SAMPLE_SIZE - MIN_SAMPLE_SIZE)) * 100;
+  const runtimeEstimate = estimateRuntimeSeconds(sampleSize);
 
   return (
     <form onSubmit={handleSubmit} className="event-input-form">
@@ -60,6 +67,9 @@ export function EventInput() {
           <span>Fewer · faster</span>
           <span>More · richer</span>
         </div>
+        <p className="agent-runtime-estimate">
+          Estimated runtime: ~{runtimeEstimate.low}s to {runtimeEstimate.high}s
+        </p>
       </div>
     </form>
   );
