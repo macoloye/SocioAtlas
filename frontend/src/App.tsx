@@ -139,12 +139,14 @@ export default function App() {
               </div>
             </div>
 
-            <section className="neo-graph-grid">
-              <div className="neo-graph-main panel-glass">
-                <div className="panel-head">
-                  <h2>Knowledge Graph</h2>
-                  <span>Primary canvas</span>
-                </div>
+            <div className="dashboard-insights">
+              <InsightTray />
+            </div>
+
+            {/* Bottom: Split View */}
+            <div className="dashboard-grid">
+              {/* Left: Coalition Map */}
+              <div className="dashboard-left">
                 <CoalitionMap />
               </div>
 
